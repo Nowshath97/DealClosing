@@ -1,0 +1,23 @@
+{
+  "name": "deal-closing-ui",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test:ai": "node scripts/test-ask-ai.mjs",
+    "ask-ai": "node --use-system-ca scripts/ask-ai-local.mjs",
+    "api": "node --env-file-if-exists=.env server/index.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.3.0",
+    "@vitejs/plugin-react": "latest",
+    "lucide-react": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "typescript": "latest",
+    "vite": "latest"
+  }
+}
