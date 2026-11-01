@@ -110,7 +110,7 @@ export default function AllocationDetailsDialog({ deal, onClose }) {
               </Section>
 
               <Section title="Close details">
-                <Table head={['Close Date', 'Type']} rows={data.closes.map(c => [date(c.close_date), c.close_type || '-'])} empty="No closes." />
+                <Table head={['Close Date', 'Type']} rows={data.closes.map(c => [date(c.close_date), c.estimate_or_final_close || '-'])} empty="No closes." />
               </Section>
 
               <Section title="Comments">

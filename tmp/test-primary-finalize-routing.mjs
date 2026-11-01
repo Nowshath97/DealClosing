@@ -1,0 +1,17 @@
+import {readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+import {lockInfo} from '../src/taskRules.js';
+assert.equal(lockInfo('finalizeallocations',{},true),null);
+assert.equal(lockInfo('finalizeallocations',{mapaccountstoclose:{taskStatus:'pending'}},true),null);
+assert.equal(lockInfo('finalizeallocations',{},false).locked,true);
+const calls=[];
+globalThis.__closeRest=async(url,options={})=>{calls.push({url,...options});if(url.startsWith('allocation?'))return [{deal_code:'D'}];if(url.startsWith('fund_closes?')&&!options.method)return [{id:10},{id:20}];return [];};
+let code=readFileSync('src/primaryCloseMappingApi.js','utf8').replace("import { rest } from './supabaseClient';","const rest=globalThis.__closeRest;").replace("import { fetchClientAccounts } from './api';",'const fetchClientAccounts=async()=>[];');
+const {savePrimaryCloseMapping}=await import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));
+await savePrimaryCloseMapping({id:'D',currency:'USD'},[{id:'10',date:'2026-11-05',final:'Estimate'},{id:'20',date:'2026-11-12',final:'Final'}],{'10':['A'],'20':['B']},{'10':{A:{}},'20':{B:{allocationFundingCurrency:'200'}}},{onlyCloseId:'20'});
+assert.equal(calls.filter(c=>c.method==='PATCH').length,1);
+assert.ok(calls.find(c=>c.method==='PATCH').url.includes('id=eq.20'));
+assert.equal(calls.filter(c=>c.method==='DELETE'&&c.url.startsWith('fund_closes?')).length,0);
+assert.ok(calls.find(c=>c.method==='DELETE').url.endsWith('&close_id=eq.20'));
+assert.equal(calls.find(c=>c.method==='POST').body[0].close_id,20);
+console.log('PASS: Primary finalize unlocked, secondary locking retained, only selected close patched, other closes retained, mapping deletion/insertion scoped.');

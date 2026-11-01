@@ -1,0 +1,26 @@
+import { PGlite } from './gate2025/runtime/node_modules/@electric-sql/pglite/dist/index.js';
+import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+const db = new PGlite();
+await db.exec(`create role authenticated;
+create table deal(deal_code varchar(50) primary key);
+create table client_account(id integer primary key);
+create table allocation_close(id integer primary key,deal_code varchar(50) references deal(deal_code));
+insert into deal values ('D1'),('D2');
+insert into client_account values (1),(2);
+insert into allocation_close values (10,'D1'),(20,'D2');`);
+const sql=readFileSync('supabase/map_account_to_close.sql','utf8');
+await db.exec(sql); await db.exec(sql);
+assert.equal((await db.query("select count(*)::int as n from information_schema.columns where table_name='map_account_to_close'")).rows[0].n,28);
+await db.exec(`insert into map_account_to_close(deal_code,client_id,fund_close_id,amount_invested,amount_percentage,pm_fit_approved,is_ic_approved,expenses_amount,vintage_year)
+values ('D1',1,10,12345678901234567.89,0.12345678901234,true,false,123.45,2026);`);
+const row=(await db.query('select * from map_account_to_close')).rows[0];
+assert.equal(row.pm_fit_approved,true); assert.equal(row.is_ic_approved,false); assert.equal(row.client_approved,null);
+assert.equal(String(row.amount_percentage),'0.12345678901234');
+await assert.rejects(()=>db.exec("insert into map_account_to_close(deal_code,client_id,fund_close_id) values ('D1',2,20)"));
+await assert.rejects(()=>db.exec("insert into map_account_to_close(deal_code,client_id,fund_close_id) values ('D1',1,10)"));
+await assert.rejects(()=>db.exec("insert into map_account_to_close(deal_code,client_id) values ('D1',999)"));
+await db.exec("insert into map_account_to_close(deal_code) values ('D1')");
+await db.exec("set role authenticated; insert into map_account_to_close(deal_code,client_id,fund_close_id) values ('D1',2,10)");
+console.log('PASS: all 28 fields, rerun, precision, nullable booleans, client FK, close/deal integrity, duplicate protection, authenticated insertion.');
+await db.close();

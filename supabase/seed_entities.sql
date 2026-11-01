@@ -1,5 +1,5 @@
 -- Dummy data for public.entity and public.entity_account_map (Acc. 1 - Acc. 10), plus read access for the app.
--- Run in Supabase Dashboard -> SQL Editor. Safe to re-run (existing ids are left alone).
+-- Run in Supabase Dashboard -> SQL Editor. Safe to re-run (existing ids are left alone). Supports normalize_client_accounts.sql.
 
 -- ENTITIES -------------------------------------------------------------------------------------------------
 insert into public.entity
@@ -35,9 +35,47 @@ values
   (26,'Retired Opportunities Fund',     now(),1,'seed',0,0,0,0,'Atlas Admin',0,0,'ROF-026',0,1,null,0,'Closed',1,1)
 on conflict ("Id") do nothing;
 
+-- Supports both the original schema and the normalized schema on subsequent runs.
+do $seed$
+begin
+  if to_regclass('public.client_entity_map') is not null then
+    insert into public.client_account(account_name,created_by,modified_by)
+      select 'Acc. ' || n,'seed','seed' from generate_series(1,10) n
+      on conflict(account_name) do nothing;
+    insert into public.client_entity_map(id,client_id,entity_id,created_by,modified_by) overriding system value
+      select m.id,a.id,m.entity_id,'seed','seed' from (values
+  -- Acc. 1: four entities
+  ( 1,'Acc. 1', 1,0), ( 2,'Acc. 1', 2,0), ( 3,'Acc. 1', 3,0), ( 4,'Acc. 1', 4,0),
+  -- Acc. 2: two
+  ( 5,'Acc. 2', 5,0), ( 6,'Acc. 2', 6,0),
+  -- Acc. 3: four
+  ( 7,'Acc. 3', 7,0), ( 8,'Acc. 3', 8,0), ( 9,'Acc. 3', 9,0), (10,'Acc. 3',10,0),
+  -- Acc. 4: one entity (+ a placeholder)
+  (11,'Acc. 4',11,0), (12,'Acc. 4',24,1),
+  -- Acc. 5: three
+  (13,'Acc. 5',12,0), (14,'Acc. 5',13,0), (15,'Acc. 5',14,0),
+  -- Acc. 6: two
+  (16,'Acc. 6',15,0), (17,'Acc. 6',16,0),
+  -- Acc. 7: three
+  (18,'Acc. 7',17,0), (19,'Acc. 7',18,0), (20,'Acc. 7',19,0),
+  -- Acc. 8: one
+  (21,'Acc. 8',20,0),
+  -- Acc. 9: one visible entity (+ an inactive and a deleted entity that must NOT show)
+  (22,'Acc. 9',21,0), (23,'Acc. 9',25,0), (24,'Acc. 9',26,0),
+  -- Acc. 10: one entity (+ a placeholder)
+  (25,'Acc. 10',22,0), (26,'Acc. 10',23,1)
+) as m(id,account,entity_id,placeholder)
+      join public.client_account a on a.account_name=m.account
+      on conflict do nothing;
+    update public.entity set
+      "ClientAccountIsPlaceholder"=coalesce("ClientAccountIsPlaceholder",case when "Id" in (23,24) then 1 else 0 end),
+      "ClientAccountSubjectToVeto"=coalesce("ClientAccountSubjectToVeto",case when "HasVetoRights"=1 then 'Yes' else 'No' end)
+      where "UpdatedBy"='seed';
+    perform setval(pg_get_serial_sequence('public.client_entity_map','id'),coalesce((select max(id) from public.client_entity_map),1),exists(select 1 from public.client_entity_map));
+  else
 -- ACCOUNT -> ENTITY MAPPING (one row per pair). Each entity belongs to exactly ONE account. --------------------
 -- Replaces any earlier seeded mapping (including the first version, where entities were shared between accounts).
-delete from public.entity_account_map where "UpdatedBy" = 'seed';
+-- Existing mappings are retained.
 
 insert into public.entity_account_map
   ("Id","UpdatedDateTime","UpdatedBy","ClientAccount","ModelValuation","Primaries","Secondaries","CoInvest","IsActive","EntityId","AccountNotes",
@@ -66,17 +104,18 @@ from (values
   -- Acc. 10: one entity (+ a placeholder)
   (25,'Acc. 10',22,0), (26,'Acc. 10',23,1)
 ) as m(id, account, entity_id, placeholder)
-join public.entity e on e."Id" = m.entity_id;
+join public.entity e on e."Id" = m.entity_id
+on conflict ("Id") do nothing;
 
 -- An entity can only ever be mapped to one account.
 create unique index if not exists entity_account_map_one_account_per_entity on public.entity_account_map ("EntityId");
 
 -- Explicit ids were used, so move the identity counters past them.
-select setval(pg_get_serial_sequence('public.entity', 'Id'),             (select max("Id") from public.entity));
-select setval(pg_get_serial_sequence('public.entity_account_map', 'Id'), (select max("Id") from public.entity_account_map));
+perform setval(pg_get_serial_sequence('public.entity', 'Id'),             (select max("Id") from public.entity));
+perform setval(pg_get_serial_sequence('public.entity_account_map', 'Id'), (select max("Id") from public.entity_account_map));
 
 -- ACCESS: the app (signed-in users) only needs to read these two tables -------------------------------------
-do $$
+do $access$
 declare t text;
 begin
   foreach t in array array['entity','entity_account_map'] loop
@@ -85,6 +124,10 @@ begin
     execute format('drop policy if exists "app read" on public.%I', t);
     execute format('create policy "app read" on public.%I for select to authenticated using (true)', t);
   end loop;
-end $$;
+end $access$;
+
+
+  end if;
+end $seed$;
 
 notify pgrst, 'reload schema';

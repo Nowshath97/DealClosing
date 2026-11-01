@@ -1,0 +1,3 @@
+-- No deal-table column is needed.
+-- Docs Deadline will be sourced from the funding task when that task is implemented.
+-- This file intentionally makes no schema changes.

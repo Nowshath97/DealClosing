@@ -1,0 +1,37 @@
+import { PGlite } from './gate2025/runtime/node_modules/@electric-sql/pglite/dist/index.js';
+import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+const db=new PGlite();
+await db.exec(`create role authenticated;
+create table deal(deal_code varchar(50) primary key);
+create table entity("Id" integer primary key);
+create table client_account(id integer primary key);
+create table client_entity_map(id integer primary key,client_id integer references client_account(id),entity_id integer references entity("Id"));
+insert into deal values ('D1'),('D2'); insert into entity values(1),(2); insert into client_account values(1); insert into client_entity_map values(1,1,1),(2,1,2);`);
+await db.exec(readFileSync('supabase/allocation_tables.sql','utf8').split('-- 7. SAMPLE DATA')[0]);
+const schema=readFileSync('supabase/fund_allocations.sql','utf8');
+await db.exec(schema); await db.exec(schema);
+assert.equal((await db.query("select count(*)::int as n from information_schema.columns where table_name='fund_allocations'")).rows[0].n,47);
+await db.exec(readFileSync('supabase/save_allocation.sql','utf8'));
+const payload={deal_code:'D1',user:'tester',header:{status:'Draft',funding_currency:'USD'},lines:[{ref:'one',entity_id:1,account_map_id:1,client_account:'Account 1',is_placeholder:0,adjusted_exposure:1000,percentage:100,expenses_amount:10}],legal_map:[],closes:[],comments:[],documents:[]};
+const save=()=>db.query('select save_allocation($1::jsonb)',[JSON.stringify(payload)]);
+await save();
+let row=(await db.query('select * from fund_allocations')).rows[0];
+const firstId=row.id;
+assert.equal(Number(row.amount_invested),1000); assert.equal(row.client_id,1);
+await db.exec(`update fund_allocations set is_funded=1,veto_notes='Retain workflow data',allocation_pct=0.12345678901234`);
+assert.equal(String((await db.query('select allocation_pct from fund_allocations')).rows[0].allocation_pct),'0.12345678901234');
+payload.lines[0].adjusted_exposure=2000;await save();
+row=(await db.query('select * from fund_allocations')).rows[0];
+assert.equal(row.id,firstId);assert.equal(Number(row.amount_invested),2000);assert.equal(Number(row.initial_amount_invested),1000);assert.equal(row.is_funded,1);assert.equal(row.veto_notes,'Retain workflow data');
+// Close-specific allocation survives edits and removal of a deal-level line.
+await db.exec("insert into allocation(deal_code) values ('D2'); insert into allocation_close(id,deal_code,close_date) values(10,'D1','2026-11-05'),(20,'D2','2026-11-06'); insert into fund_allocations(deal_code,entity_id,fund_close_id,amount_invested) values('D1',1,10,500)");
+payload.closes=[{id:10,close_date:'2026-11-05',close_type:'Estimate'}];payload.lines=[];await save();
+assert.equal((await db.query('select * from fund_allocations')).rows.length,1);
+assert.equal(Number((await db.query('select amount_invested from fund_allocations')).rows[0].amount_invested),500);
+await assert.rejects(()=>db.exec("insert into fund_allocations(deal_code,entity_id,fund_close_id) values('D1',1,20)"));
+// Failed saves roll back both legacy metadata and the new financial records.
+payload.lines=[{ref:'bad',entity_id:999,adjusted_exposure:7}];await assert.rejects(save);
+assert.equal((await db.query('select * from fund_allocations')).rows.length,1);
+console.log('PASS: 47 fields, rerun, precision, transactional saves, stable fund IDs, updates, initial amount/workflow preservation, removed lines, independent close allocations, close/deal FK, rollback.');
+await db.close();

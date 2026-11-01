@@ -7,6 +7,10 @@ declare t text;
 begin
   -- Read-only lookup tables
   foreach t in array array['ref_assignee_type','ref_deal_activity','ref_deal_milestone','ref_deal_status','ref_deal_type','ref_funding_required','ref_task_name','ref_task_status','task_activity_map','deal_groups'] loop
+    if to_regclass('public.' || quote_ident(t)) is null then
+      raise notice 'Skipping missing optional table public.%', t;
+      continue;
+    end if;
     execute format('alter table public.%I enable row level security', t);
     execute format('grant select on public.%I to authenticated', t);
     execute format('drop policy if exists "app read" on public.%I', t);
@@ -15,6 +19,9 @@ begin
 
   -- Tables the app writes to
   foreach t in array array['deal','task'] loop
+    if to_regclass('public.' || quote_ident(t)) is null then
+      raise exception 'Required app table public.% does not exist.', t;
+    end if;
     execute format('alter table public.%I enable row level security', t);
     execute format('grant select, insert, update on public.%I to authenticated', t);
     execute format('drop policy if exists "app rw" on public.%I', t);

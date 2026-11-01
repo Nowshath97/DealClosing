@@ -48,7 +48,7 @@ async function loadDealContext(token,{dealCode,limit=300,includeTasks=true}={}){
 }
 const code=()=>{let s;do{s=[...randomBytes(15)].map(n=>'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'[n%36]).join('')}while(!/[A-Z]/.test(s)||!/[0-9]/.test(s));return s;};
 async function createDeal(form,token,email){
-  for(const k of ['investmentName','projectName','investmentType','commitment','targetCloseDate']) if(!String(form[k]??'').trim()) throw Object.assign(new Error(`${k} is required`),{status:400});
+  for(const k of ['investmentName','projectName','investmentType','commitment','targetCloseDate','relationshipLead','executionTeamMember','executionLocation']) if(!String(form[k]??'').trim()) throw Object.assign(new Error(`${k} is required`),{status:400});
   if(!Number.isFinite(Number(form.commitment))||Number(form.commitment)<=0)throw Object.assign(new Error('commitment must be positive'),{status:400});
   if(!/^\d{4}-\d{2}-\d{2}$/.test(form.targetCloseDate))throw Object.assign(new Error('targetCloseDate must be YYYY-MM-DD'),{status:400});
   const [types,statuses,milestones,funding,names,activities,taskStatuses,map]=await Promise.all([refs('ref_deal_type',token),refs('ref_deal_status',token),refs('ref_deal_milestone',token),refs('ref_funding_required',token),refs('ref_task_name',token),refs('ref_deal_activity',token),refs('ref_task_status',token),db('task_activity_map?select=*',token).catch(()=>[])]);
@@ -59,7 +59,7 @@ async function createDeal(form,token,email){
   let id;
   for(let i=0;i<5;i++){
     id=code();
-    try {await db('deal',token,{method:'POST',prefer:'return=minimal',body:{deal_code:id,name:form.investmentName.trim(),project_name:blank(form.projectName),sponsor_gp:blank(form.sponsor),investment_type_detail:blank(form.investmentTypeDetail),execution_type:blank(form.executionType||'Direct'),asset_class:blank(form.assetClass),region:blank(form.region),type,status:pick(statuses,'Active')??statuses[0]?.id,milestone:pick(milestones,'IC Approved')??milestones[0]?.id,currency:form.currency||'USD',is_funding_required:fundingId,commitment_funding_currency:Number(form.commitment),commitment_usd:(form.currency||'USD')==='USD'?Number(form.commitment):null,target_closing_date:form.targetCloseDate,ic_approval:icApproved}});break;}catch(e){if(i===4||!(/409|23505|duplicate/i.test(e.message)))throw e;}
+    try {await db('deal',token,{method:'POST',prefer:'return=minimal',body:{deal_code:id,name:form.investmentName.trim(),project_name:blank(form.projectName),sponsor_gp:blank(form.sponsor),investment_type_detail:blank(form.investmentTypeDetail),investment_type_detail_id:form.investmentTypeDetailId?Number(form.investmentTypeDetailId):null,relationship_lead:Number(form.relationshipLead),execution_team_member:Number(form.executionTeamMember),execution_location:blank(form.executionLocation),execution_type:blank(form.executionType||'Direct'),asset_class:blank(form.assetClass),region:blank(form.region),type,status:pick(statuses,'Active')??statuses[0]?.id,milestone:pick(milestones,'IC Approved')??milestones[0]?.id,currency:form.currency||'USD',is_funding_required:fundingId,commitment_funding_currency:Number(form.commitment),commitment_usd:(form.currency||'USD')==='USD'?Number(form.commitment):null,target_closing_date:form.targetCloseDate,ic_approval:icApproved}});break;}catch(e){if(i===4||!(/409|23505|duplicate/i.test(e.message)))throw e;}
   }
   const taskKeys=tasksForNewDeal({icApproved,fundingRequired});
   const missing=[];
@@ -117,8 +117,12 @@ async function run(req,res){
       return json(res,200,{dealCode,status:'Initiated',message:'Allocation saved; workflow task completion remains separate'});
     }
     if(path.endsWith('/allocations')&&req.method==='GET'){
-      const [header,lines,legalMap,closes,comments,documents]=await Promise.all(['allocation','allocation_line','allocation_legal_map','allocation_close','allocation_comment','allocation_document'].map(t=>db(`${t}?deal_code=eq.${q}&select=*`,token)));
-      return json(res,200,{header:header[0]||null,lines,legalMap,closes,comments,documents});
+      const [header,storedLines,legalMap,closes,comments,documents,fundAllocations]=await Promise.all(['allocation','allocation_line','allocation_legal_map','fund_closes','deal_comment','deal_document','fund_allocations'].map(t=>db(`${t}?deal_code=eq.${q}&select=*`,token)));
+      const lines=storedLines.map(line=>{
+        const fund=fundAllocations.find(f=>f.fund_close_id==null&&f.entity_id===line.entity_id);
+        return fund?{...line,adjusted_exposure:fund.amount_invested,percentage:fund.allocation_pct,expenses_amount:fund.expenses_amount}:line;
+      });
+      return json(res,200,{header:header[0]||null,lines,legalMap,closes,comments,documents,fundAllocations});
     }
     if(!path.includes('/allocations')&&req.method==='GET'){
       const rows=await db(`deal?deal_code=eq.${q}&select=*`,token);return rows.length?json(res,200,rows[0]):json(res,404,{error:'Deal not found'});

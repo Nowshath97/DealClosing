@@ -4,12 +4,13 @@
 // For now locking is derived from the status of the deal's other tasks; this is the logic to move into
 // Temporal later. Keep it here so the workflow engine can replace it without touching the UI.
 //
-//   activity : which ref_deal_activity the task belongs to (used when task_activity_map can't tell us)
+//   activity : intended ref_deal_activity for the task; task_activity_map is the database source of truth
 //   if       : the task is only created when this deal fact is true ('icApproved' | 'fundingRequired')
 //   after    : task keys that must be Completed before this task unlocks
 export const norm = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
 
 export const TASK_RULES = {
+  mapaccountstoclose: { label: 'Map Accounts to Close', activity: 'allocations', if: 'primary' },
   initiateallocations: { label: 'Initiate Allocations', activity: 'allocations' },
   finalizeallocations: { label: 'Finalize Allocations', activity: 'allocations', after: ['initiateallocations'] },
   amlcounterpartyscreening: { label: 'AML Counterparty Screening', activity: 'riskcompliance' },
@@ -26,13 +27,22 @@ export const TASK_RULES = {
 export const DISPLAY_ACTIVITY = { legalapprovaltoclose: 'transactionaldocs' };
 
 // Task keys to create when a deal is created, given what is known at that moment.
-export const tasksForNewDeal = facts => Object.entries(TASK_RULES).filter(([, r]) => !r.if || facts[r.if]).map(([key]) => key);
+export const tasksForNewDeal = facts => Object.entries(TASK_RULES)
+  .filter(([key, r]) => {
+    if (facts.primary && ['initiateallocations', 'finalizeallocations'].includes(key)) return false;
+    return !r.if || facts[r.if];
+  })
+  .map(([key]) => key);
 
 // For a not-yet-started task: is it locked, and why? `byKey` maps task key -> that deal's task.
-export function lockInfo(key, byKey) {
+export function lockInfo(key, byKey, primary = false) {
+  if (primary && key === 'finalizeallocations') return null;
   const rule = TASK_RULES[key];
   if (!rule?.after) return null;
-  const unmet = rule.after.filter(dep => byKey[dep]?.taskStatus !== 'completed');
+  const dependencies = primary
+    ? rule.after.map(dep => ['finalizeallocations', 'initiateallocations'].includes(dep) ? 'mapaccountstoclose' : dep)
+    : rule.after;
+  const unmet = dependencies.filter(dep => byKey[dep]?.taskStatus !== 'completed');
   if (!unmet.length) return null;
   return { locked: true, reason: `Available after ${unmet.map(d => TASK_RULES[d].label).join(' and ')} is completed` };
 }

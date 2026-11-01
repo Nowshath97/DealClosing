@@ -163,7 +163,7 @@ async function loadAllocation(ctx: ToolContext, code: string) {
     ctx.rest(`allocation?deal_code=eq.${q}&select=*`),
     ctx.rest(`allocation_line?deal_code=eq.${q}&select=*&order=line_no,id`),
     ctx.rest(`allocation_legal_map?deal_code=eq.${q}&select=*&order=id`),
-    ctx.rest(`allocation_close?deal_code=eq.${q}&select=*&order=id`),
+    ctx.rest(`fund_closes?deal_code=eq.${q}&select=*&order=id`),
     ctx.rest("entity?select=Id,EntityName"),
   ]);
   return { header: (headers as any[])[0] ?? null, lines: lines as any[], legal: legal as any[], closes: closes as any[], entities: entities as any[] };
@@ -195,7 +195,7 @@ function allocationSummary(a: Awaited<ReturnType<typeof loadAllocation>>) {
       const line = a.lines.find((l) => l.id === m.line_id);
       return { client_account: line?.client_account ?? null, allocating_entity: line ? entityName(line.entity_id) : null, investment_legal_name: m.investment_legal_name, amount: m.allocation_amount };
     }),
-    closes: a.closes.map((c) => ({ close_date: c.close_date, type: c.close_type })),
+    closes: a.closes.map((c) => ({ close_date: c.close_date, type: c.estimate_or_final_close })),
   };
 }
 

@@ -1,0 +1,16 @@
+import { PGlite } from './gate2025/runtime/node_modules/@electric-sql/pglite/dist/index.js';
+import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
+const db=new PGlite();
+await db.exec("create role authenticated;create table deal(deal_code varchar(50) primary key);insert into deal values('A'),('B')");
+const sql=readFileSync('supabase/fund_closes.sql','utf8');await db.exec(sql);
+await db.exec("insert into fund_closes(deal_code,close_date) values('A','2026-11-05'),('A','2026-12-01'),('B','2026-11-05')");
+assert.deepEqual((await db.query('select close_number from fund_closes order by id')).rows.map(r=>r.close_number),[1,2,1]);
+await db.exec("update fund_closes set close_date='2026-11-06' where deal_code='A' and close_number=1;delete from fund_closes where deal_code='A' and close_number=2;insert into fund_closes(deal_code) values('A')");
+assert.deepEqual((await db.query("select close_number from fund_closes where deal_code='A' order by close_number")).rows.map(r=>r.close_number),[1,3]);
+await assert.rejects(()=>db.exec("update fund_closes set close_number=5 where deal_code='A'"));
+await assert.rejects(()=>db.exec("insert into fund_closes(deal_code,close_number) values('A',1)"));
+await db.exec(sql);
+await db.exec("set role authenticated;insert into fund_closes(deal_code) values('A')");
+assert.equal((await db.query("select max(close_number) as n from fund_closes where deal_code='A'")).rows[0].n,4);
+console.log('PASS: per-deal numbering, stable date edits, deletion gaps, uniqueness, immutable numbers, reruns, authenticated inserts.');await db.close();

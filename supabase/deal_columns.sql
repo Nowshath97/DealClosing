@@ -1,4 +1,4 @@
--- Columns the Create Deal form saves that the deal table doesn't have yet.
+-- Columns used by Create Deal and the deal summary that may be absent on a fresh project.
 -- Run in Supabase Dashboard -> SQL Editor. Safe to re-run.
 alter table public.deal
   add column if not exists project_name           varchar,
@@ -6,7 +6,15 @@ alter table public.deal
   add column if not exists investment_type_detail varchar,
   add column if not exists execution_type         varchar,
   add column if not exists region                 varchar,
-  add column if not exists asset_class            varchar;
+  add column if not exists asset_class            varchar,
+  add column if not exists currency               varchar(10),
+  add column if not exists commitment_funding_currency numeric(20,2),
+  add column if not exists commitment_usd         numeric(20,2),
+  add column if not exists target_closing_date    date,
+  add column if not exists target_funding_date    date,
+  add column if not exists ic_approval            boolean,
+  add column if not exists ic_approved_date       date,
+  add column if not exists is_funding_required    integer references public.ref_funding_required(id);
 
 -- Who a task is assigned to; set to the person who completes it.
 alter table public.task add column if not exists assigned_to varchar;
@@ -18,6 +26,10 @@ alter table public.task add column if not exists assigned_to varchar;
 insert into public.ref_task_name (id, value, sort_order)
 select 10, 'Assign Legal Lead', 10
 where not exists (select 1 from public.ref_task_name where value = 'Assign Legal Lead');
+
+insert into public.ref_task_name (id, value, sort_order)
+select (select coalesce(max(id), 0) + 1 from public.ref_task_name), 'Map Accounts to Close', 5
+where not exists (select 1 from public.ref_task_name where value = 'Map Accounts to Close');
 
 -- Make the API pick up the new columns right away.
 notify pgrst, 'reload schema';

@@ -4,6 +4,9 @@ import { modulesForDeal } from './api';
 import AllocationDetailsDialog from './AllocationDetailsDialog';
 import AskAIButton from './ai/AskAIButton';
 import AICopilotDrawer from './ai/AICopilotDrawer';
+import PrimaryDealSummary from './PrimaryDealSummary';
+import DealOverviewDetails from './DealOverviewDetails';
+import DealProgressPath from './DealProgressPath';
 
 // Modules come from the database (ref_deal_activity); pick an icon from keywords in the title.
 const iconFor = title => {
@@ -26,20 +29,20 @@ function TaskDot({ status }) {
   return <span className="ds-dot pending"><CircleDashed size={11} /></span>;
 }
 
-function Kpi({ icon: Icon, label, value, tone }) {
-  return <div className="ds-kpi"><span className={`ds-kpi-icon ${tone}`}><Icon size={16} /></span><div><span>{label}</span><strong>{value}</strong></div></div>;
-}
-
 // A task is "mine" when its assignee matches the signed-in user's name or email.
 // A finished task shows its name as plain text; the details live in the activity's View Details (where there is one).
 const isDone = t => t.taskStatus === 'completed' || t.taskStatus === 'skipped';
 const normName = s => String(s || '').toLowerCase().replace(/[^a-z0-9@.]/g, '');
 
-export default function DealSummary({ deal, deals = [], user, onBack, onOpenTask, onOpenDeal, initialModuleId }) {
+export default function DealSummary(props) {
+  if (/^primary$/i.test(String(props.deal?.investmentType || '').trim())) return <PrimaryDealSummary {...props} />;
+  return <StandardDealSummary {...props} />;
+}
+
+function StandardDealSummary({ deal, deals = [], user, onBack, onOpenTask, onOpenDeal, initialModuleId }) {
   const [askOpen, setAskOpen] = useState(false);
   const dealModules = modulesForDeal(deal);
   const [moduleId, setModuleId] = useState(initialModuleId || dealModules[0]?.id);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [taskTab, setTaskTab] = useState('all');
   const [viewingAllocation, setViewingAllocation] = useState(false);
 
@@ -70,29 +73,8 @@ export default function DealSummary({ deal, deals = [], user, onBack, onOpenTask
       </header>
 
       <section className="ds-summary">
-        <ol className="ds-path">
-          {deal.path.map((m, i) => (
-            <li key={m} className={i < milestoneIndex || i === deal.path.length - 1 && i === milestoneIndex ? 'done' : i === milestoneIndex ? 'current' : ''}>
-              {(i < milestoneIndex || i === deal.path.length - 1 && i === milestoneIndex) && <Check size={15} />}
-              <span>{m}</span>
-            </li>
-          ))}
-        </ol>
-        <div className="ds-kpis">
-          <Kpi icon={Banknote} tone="green" label="Commitment USD" value={deal.commitment} />
-          <Kpi icon={Banknote} tone="green" label={`Commitment ${deal.currency}`} value={deal.commitmentFunding} />
-          <Kpi icon={Calendar} tone="red" label="Target Funding" value={deal.targetFundingDate} />
-          <Kpi icon={Target} tone="orange" label="Target Closing" value={deal.targetCloseDate} />
-          <Kpi icon={FileText} tone="blue" label="Docs Deadline (GP)" value="-" />
-        </div>
-        <button className="ds-more" onClick={() => setDetailsOpen(o => !o)}>
-          {detailsOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />} Deal details
-        </button>
-        {detailsOpen && (
-          <div className="ds-details">
-            {[['Deal Code', deal.id], ['Deal Type', deal.investmentType], ['Status', deal.status], ['Milestone', deal.milestone], ['IC Approved', deal.icApproved], ['Currency', deal.currency], ['Target Closing', deal.targetCloseDate], ['Created', deal.dateCreated]].map(([l, v]) => <div key={l}><span>{l}</span><strong>{v}</strong></div>)}
-          </div>
-        )}
+        <DealProgressPath deal={deal} />
+        <DealOverviewDetails deal={deal} />
       </section>
 
       <div className="ds-workspace">

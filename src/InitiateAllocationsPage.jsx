@@ -2,18 +2,21 @@ import React, { useEffect, useRef, useState } from 'react';
 import { fetchAccountEntities } from './api';
 import { currentUser } from './supabaseClient';
 import { buildAllocationPayload, loadAllocation, saveAllocation } from './allocationApi';
+import PrimaryCloseMappingPage from './PrimaryCloseMappingPage';
 import './initiateAllocations.css';
 import { ArrowLeft, BarChart3, CalendarCheck, Check, FileText, Files, HelpCircle, Link2, MessageSquare, PieChart, Plus, Save, Trash2, UploadCloud, User, Wallet, X, Zap } from 'lucide-react';
 
 const norm = s => String(s || '').toLowerCase().replace(/[^a-z]/g, '');
 
 // The Initiate Allocations task opens this dedicated screen for every deal, whatever its investment type.
-export const isInitiateAllocations = (deal, task) => norm(task.name).includes('initiateallocation');
+export const isMapAccountsToClose = task => norm(task.name) === 'mapaccountstoclose';
+export const isInitiateAllocations = (deal, task) => norm(task.name).includes('initiateallocation') || isMapAccountsToClose(task);
 export const isFinalizeAllocations = task => norm(task.name).includes('finalizeallocation');
 
 // The same screen serves both tasks. Finalize opens the saved allocation; the deal facts and the funding answers given at
 // initiation (funding required / partial funding) are locked there (locked: true); everything else stays editable.
 const MODES = {
+  map: { title: 'Map Accounts to Close', subtitle: 'Map accounts and allocations to the deal close dates.', action: 'Save Mapping', busyLabel: 'Saving…', finalStatus: 'Initiated', locked: false },
   initiate: { title: 'Initiate Allocations', subtitle: 'Define deal exposure, set funding requirements, and allocate across accounts.', action: 'Initiate', busyLabel: 'Initiating…', finalStatus: 'Initiated', locked: false },
   finalize: { title: 'Finalize Allocations', subtitle: 'Review the allocations agreed at initiation, make any final adjustments and finalize.', action: 'Finalize', busyLabel: 'Finalizing…', finalStatus: 'Finalized', locked: true }
 };
@@ -70,7 +73,7 @@ function Section({ id, icon: Icon, tone = 'blue', title, desc, actions, children
 }
 
 function AllocationForm({ deal, task, mode = 'initiate', onBack, onComplete, initial, initialStatus }) {
-  const cfg = MODES[mode];
+  const cfg = MODES[mode === 'initiate' && isMapAccountsToClose(task) ? 'map' : mode];
   const locked = cfg.locked;
   const [s, setS] = useState(() => ({
     totalExposure: '',
@@ -147,6 +150,8 @@ function AllocationForm({ deal, task, mode = 'initiate', onBack, onComplete, ini
     const unmatched = s.allocs.find(a => a.account && a.entity && !entityInfo(a));
     if (unmatched) throw new Error(`Entity "${unmatched.entity}" is no longer available under ${unmatched.account}. Please reselect it.`);
     await saveAllocation(buildAllocationPayload({ deal, s, status, lookups, expenseOf, pctShown }));
+    const refreshed = await loadAllocation(deal.id);
+    if (refreshed) set({ comments: refreshed.state.comments, docs: refreshed.state.docs, initialDocumentIds: refreshed.state.initialDocumentIds, closes: refreshed.state.closes });
     statusRef.current = status;
     setSavedAt(new Date().toLocaleTimeString());
   };
@@ -379,11 +384,12 @@ function AllocationForm({ deal, task, mode = 'initiate', onBack, onComplete, ini
 
 // Stored allocation -> initial form state (empty lists get one blank row, like a new form).
 function toInitial(r) {
-  if (!r) return { initial: null, status: 'Draft' };
+  if (!r) return { initial: null, status: 'Draft', hasAllocation: false };
   const st = r.state;
   const custom = [...new Set(st.mappings.map(m => m.legalName).filter(n => n && !LEGAL_NAMES.includes(n)))];
   return {
     status: r.status,
+    hasAllocation: r.hasAllocation,
     initial: {
       ...st, bulkName: '', legalNames: custom,
       allocs: st.allocs.length ? st.allocs : [newAlloc()],
@@ -393,7 +399,7 @@ function toInitial(r) {
   };
 }
 
-export default function InitiateAllocationsPage(props) {
+function AllocationTaskPage(props) {
   const { deal, onBack } = props;
   const [attempt, setAttempt] = useState(0);
   const [load, setLoad] = useState({ loading: true, error: '', data: null });
@@ -419,7 +425,7 @@ export default function InitiateAllocationsPage(props) {
       </div>
     );
   }
-  if (props.mode === 'finalize' && !load.data.initial) {
+  if (props.mode === 'finalize' && !load.data.hasAllocation) {
     return (
       <div className="workspace-page">
         <div className="form-error" role="alert">There is no saved allocation for this deal yet. Complete Initiate Allocations first.
@@ -429,4 +435,10 @@ export default function InitiateAllocationsPage(props) {
     );
   }
   return <AllocationForm key={`${deal.id}-${props.mode || 'initiate'}`} {...props} initial={load.data.initial} initialStatus={load.data.status} />;
+}
+
+export default function InitiateAllocationsPage(props) {
+  if (isFinalizeAllocations(props.task) && props.task.closeId != null && ['primary', 'primaries'].includes(norm(props.deal.investmentType))) return <PrimaryCloseMappingPage {...props} closeId={props.task.closeId} />;
+  if (isMapAccountsToClose(props.task)) return <PrimaryCloseMappingPage {...props} />;
+  return <AllocationTaskPage {...props} />;
 }

@@ -28,7 +28,7 @@ export default function ReviewTaskPage({ deal, module, task, config, user, onBac
   useEffect(() => {
     let live = true;
     setLoad({ loading: true, error: '' });
-    loadReview(task.id)
+    loadReview(task.id, deal.id)
       .then(r => {
         if (!live) return;
         // Older rows only have the single `answer` column.
@@ -40,7 +40,7 @@ export default function ReviewTaskPage({ deal, module, task, config, user, onBac
       })
       .catch(e => live && setLoad({ loading: false, error: e.message }));
     return () => { live = false; };
-  }, [task.id, attempt, firstKey]);
+  }, [task.id, deal.id, attempt, firstKey]);
 
   const choose = (key, value) => { setAnswers(a => ({ ...a, [key]: value })); setError(''); };
 
@@ -69,14 +69,14 @@ export default function ReviewTaskPage({ deal, module, task, config, user, onBac
   const post = async () => {
     const text = comment.trim();
     if (!text) return;
-    try { const row = await addComment(task.id, text); setComments(c => [...c, row]); setComment(''); } catch (e) { setError(e.message); }
+    try { const row = await addComment(deal.id, task.id, text); setComments(c => [...c, row]); setComment(''); } catch (e) { setError(e.message); }
   };
   const upload = async files => {
     if (!files?.length) return;
-    try { const rows = await addDocuments(task.id, files); setDocs(d => [...d, ...rows]); } catch (e) { setError(e.message); }
+    try { const rows = await addDocuments(deal.id, task.id, files); setDocs(d => [...d, ...rows]); } catch (e) { setError(e.message); }
   };
   const dropDoc = async id => {
-    try { await removeDocument(id); setDocs(d => d.filter(x => x.id !== id)); } catch (e) { setError(e.message); }
+    try { await removeDocument(deal.id, id); setDocs(d => d.filter(x => x.id !== id)); } catch (e) { setError(e.message); }
   };
 
   if (load.loading) return <div className="workspace-page"><p className="rv-hint">Loading task…</p></div>;
