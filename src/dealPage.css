@@ -75,3 +75,411 @@
 .dp-gap{padding:0 4px;color:var(--muted)}
 
 .dp-welcome-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+
+/* ============================================
+   DEAL PAGE - INTERACTIVE VIEW STYLES
+   Append to styles.css
+   ============================================ */
+
+/* View switch toolbar */
+.dp-page .dp-view-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 16px 0 12px;
+}
+
+.dp-page .dp-view-switch {
+  display: inline-flex;
+  gap: 3px;
+  padding: 4px;
+  background: #f1f5f9;
+  border-radius: 11px;
+}
+
+.dp-page .dp-view-switch button {
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dp-page .dp-view-switch button.on {
+  background: #fff;
+  color: #155ac4;
+  box-shadow: 0 1px 4px #142d4d20;
+}
+
+/* Columns dropdown */
+.dp-page .dp-columns-menu {
+  position: relative;
+  z-index: 15;
+}
+
+.dp-page .dp-columns-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d6e0ed;
+  background: white;
+  border-radius: 9px;
+  padding: 9px 12px;
+  color: #23375c;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.dp-page .dp-columns-popover {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 290px;
+  max-height: 380px;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid #dbe4ef;
+  border-radius: 13px;
+  box-shadow: 0 12px 35px #102b4a26;
+  padding: 16px;
+  z-index: 30;
+}
+
+.dp-page .dp-columns-popover strong {
+  font-size: 14px;
+  color: #172b4d;
+}
+
+.dp-page .dp-columns-popover p {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #64748b;
+  margin: 7px 0 12px;
+}
+
+.dp-page .dp-column-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 3px;
+  font-size: 13px;
+  color: #263a59;
+  cursor: pointer;
+}
+
+.dp-page .dp-column-choice input {
+  accent-color: #2563eb;
+  width: 16px;
+  height: 16px;
+}
+
+.dp-page .dp-columns-reset {
+  margin-top: 8px;
+  border: 0;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-radius: 8px;
+  padding: 9px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+/* Expandable deal rows */
+.dp-page .dp-expand-table {
+  width: 100%;
+}
+
+.dp-page .dp-expand-head,
+.dp-page .dp-expand-cell {
+  width: 36px;
+  min-width: 36px;
+  text-align: center;
+  padding-left: 8px;
+  padding-right: 4px;
+}
+
+.dp-page .dp-expand-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 27px;
+  height: 27px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #7185a4;
+  cursor: pointer;
+}
+
+.dp-page .dp-expand-toggle:hover,
+.dp-page .dp-row-open .dp-expand-toggle {
+  background: #eaf2ff;
+  color: #1761d1;
+}
+
+.dp-page .dp-deal-row:hover {
+  background: #f8fbff;
+}
+
+.dp-page .dp-row-open {
+  background: #f7faff;
+}
+
+/* Compact milestone progress */
+.dp-page .dp-progress-head {
+  min-width: 130px;
+}
+
+.dp-page .dp-progress-button {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 110px;
+  border: 0;
+  background: transparent;
+  padding: 8px 0;
+  cursor: pointer;
+}
+
+.dp-page .dp-progress-track {
+  display: flex;
+  gap: 3px;
+  flex: 1;
+  min-width: 65px;
+}
+
+.dp-page .dp-progress-segment {
+  flex: 1;
+  height: 7px;
+  background: #e2e8f0;
+  border-radius: 5px;
+}
+
+.dp-page .dp-progress-segment.done {
+  background: #16a36c;
+}
+
+.dp-page .dp-progress-count {
+  font-size: 12px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+/* Expanded milestone details */
+.dp-page .dp-details-row > td {
+  padding: 0 12px 14px 45px !important;
+  background: #f7faff;
+}
+
+.dp-page .dp-milestone-panel {
+  border: 1px solid #dce7f5;
+  background: white;
+  border-radius: 12px;
+  padding: 17px 20px;
+  margin-top: 4px;
+}
+
+.dp-page .dp-milestone-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.dp-page .dp-milestone-heading > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dp-page .dp-milestone-heading strong {
+  font-size: 14px;
+  color: #142b51;
+}
+
+.dp-page .dp-milestone-heading span {
+  font-size: 12px;
+  color: #71819b;
+}
+
+.dp-page .dp-milestone-heading button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: #eff6ff;
+  color: #1d5fbd;
+  padding: 8px 11px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Milestone detail cards */
+.dp-page .dp-milestone-grid {
+  display: grid;
+  grid-template-columns:
+    repeat(auto-fit, minmax(175px, 1fr));
+  gap: 10px;
+}
+
+.dp-page .dp-milestone-item {
+  border: 1px solid #e6ebf2;
+  border-radius: 9px;
+  padding: 11px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dp-page .dp-milestone-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #52647e;
+}
+
+.dp-page .dp-milestone-value {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #233956;
+}
+
+.dp-page .dp-milestone-value .dp-st {
+  flex-shrink: 0;
+}
+
+/* Responsive layout */
+@media (max-width: 700px) {
+  .dp-page .dp-view-toolbar {
+    align-items: stretch;
+  }
+
+  .dp-page .dp-milestone-grid {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .dp-page .dp-details-row > td {
+    padding-left: 8px !important;
+  }
+
+  .dp-page .dp-milestone-panel {
+    padding: 12px;
+  }
+
+  .dp-page .dp-columns-popover {
+    right: 0;
+    max-width: calc(100vw - 32px);
+  }
+}
+
+}
+.dp-page .dp-kpi-modern .dp-kpi-text small {
+  font-size: 13px;
+  line-height: 1.35;
+  color: #405779;
+}
+.dp-page .dp-kpi-modern .dp-kpi-subtitle {
+  font-size: 11px;
+  color: #6b7d98;
+}
+.dp-page .dp-kpi-modern .dp-kpi-chevron {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  color: var(--kpi-accent);
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: opacity .2s ease, transform .2s ease;
+}
+.dp-page .dp-kpi-modern:hover .dp-kpi-chevron,
+.dp-page .dp-kpi-modern.on .dp-kpi-chevron { opacity: 1; transform: translateX(0); }
+.dp-page .dp-kpi-modern .dp-kpi-bar {
+  position: absolute;
+  bottom: 12px;
+  left: 22px;
+  right: 22px;
+  width: auto;
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.8);
+  overflow: hidden;
+}
+.dp-page .dp-kpi-modern .dp-kpi-bar i {
+  display: block;
+  height: 100%;
+  width: var(--dp-kpi-percent);
+  border-radius: inherit;
+  background: var(--kpi-accent);
+  transition: width .65s cubic-bezier(.2,.8,.2,1);
+}
+@media (max-width: 1050px) {
+  .dp-page .dp-kpis-modern { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 550px) {
+  .dp-page .dp-kpis-modern { grid-template-columns: 1fr; gap: 10px; }
+  .dp-page .dp-kpi-modern { min-height: 100px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dp-page .dp-kpi-modern,
+  .dp-page .dp-kpi-modern *,
+  .dp-page .dp-kpi-modern *::before,
+  .dp-page .dp-kpi-modern *::after { animation: none !important; transition: none !important; }
+  .dp-page .dp-kpi-modern:hover { transform: none; }
+}
+
+/* Deal lifecycle: IC Approved -> Ready to Close -> Closed */
+.dp-page .dp-deal-stage-head { min-width: 152px; white-space: nowrap; }
+.dp-page .dp-stage-head-hint { color: #94a3b8; cursor: help; font-size: 12px; }
+.dp-page .dp-deal-stage { display: flex; align-items: center; width: 135px; min-height: 32px; margin: 0 auto; }
+.dp-page .dp-deal-stage-node { flex: 0 0 22px; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #a3b1c6; border-radius: 50%; background: #fff; color: #fff; transition: background .2s ease, border-color .2s ease, transform .2s ease; cursor: help; }
+.dp-page .dp-deal-stage-node.done { background: #169c69; border-color: #169c69; }
+.dp-page .dp-deal-stage-node:hover { transform: scale(1.14); }
+.dp-page .dp-deal-stage-line { height: 2px; flex: 1 1 auto; min-width: 12px; background: #cbd5e1; transition: background .2s ease; }
+.dp-page .dp-deal-stage-line.done { background: #169c69; }
+@media (prefers-reduced-motion: reduce) { .dp-page .dp-deal-stage-node, .dp-page .dp-deal-stage-line { transition: none; } }
+
+/* Center Deal Status column heading */
+.dp-page .dp-table th.dp-deal-status-col {
+  text-align: center !important;
+  vertical-align: middle;
+}
+
+/* Center Deal Status column cells */
+.dp-page .dp-table td.dp-deal-status-col {
+  text-align: center !important;
+  vertical-align: middle;
+}
+
+/* Center the progress indicator */
+.dp-page .dp-deal-status-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Keep circles and connecting lines aligned */
+.dp-page .dp-deal-status-progress > * {
+  flex-shrink: 0;
+}
+
+.dp-page .dp-table th.dp-deal-status-col,
+.dp-page .dp-table td.dp-deal-status-col {
+  min-width: 210px;
+  width: 210px;
+}
